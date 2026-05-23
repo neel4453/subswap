@@ -1,0 +1,1370 @@
+
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>SubSwap — AI School Scheduling</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg:#070b14; --bg2:#0c1220; --bg3:#101828;
+  --surface:rgba(12,18,36,0.94); --surface2:rgba(18,26,50,0.88); --surface3:rgba(26,36,66,0.75);
+  --border:rgba(0,191,255,0.11); --border2:rgba(0,191,255,0.24);
+  --accent:#00bfff; --accent2:#7b61ff; --accent-dim:rgba(0,191,255,0.1);
+  --green:#00e5a0; --orange:#ff9f43; --red:#ff5f7e; --yellow:#ffd32a;
+  --text:#eef2ff; --text2:#7b90be; --text3:#384870;
+  --radius:14px; --shadow:0 8px 40px rgba(0,0,0,0.55);
+  --sidebar-w:230px;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden}
+body{font-family:'Space Grotesk',sans-serif;background:var(--bg);color:var(--text)}
+
+/* ── BACKGROUND ── */
+.bg-wrap{position:fixed;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+.orb{position:absolute;border-radius:50%;filter:blur(110px);animation:orbf 16s ease-in-out infinite alternate}
+.orb1{width:700px;height:700px;background:#7b61ff;opacity:.14;top:-200px;left:-200px}
+.orb2{width:550px;height:550px;background:#00bfff;opacity:.12;bottom:-150px;right:-100px;animation-delay:-8s}
+.orb3{width:400px;height:400px;background:#ff6bcd;opacity:.08;top:35%;left:35%;animation-delay:-4s}
+@keyframes orbf{from{transform:translate(0,0) scale(1)}to{transform:translate(70px,50px) scale(1.18)}}
+.grid-bg{position:absolute;inset:0;background-image:linear-gradient(rgba(0,191,255,.03) 1px,transparent 1px),linear-gradient(90deg,rgba(0,191,255,.03) 1px,transparent 1px);background-size:48px 48px;mask-image:radial-gradient(ellipse 80% 80% at 50% 50%,#000 40%,transparent 100%)}
+
+/* ── LAYOUT ── */
+.app{position:relative;z-index:1;display:flex;height:100vh;overflow:hidden}
+
+/* ── SIDEBAR ── */
+.sidebar{
+  width:var(--sidebar-w);flex-shrink:0;
+  background:rgba(7,11,20,0.96);
+  border-right:1px solid var(--border);
+  display:flex;flex-direction:column;
+  backdrop-filter:blur(20px);
+  transition:transform .28s cubic-bezier(.4,0,.2,1);
+  z-index:50;
+}
+.sidebar-logo{padding:22px 20px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
+.logo-icon{width:38px;height:38px;border-radius:10px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0;box-shadow:0 0 20px rgba(0,191,255,.35)}
+.logo-text{font-size:16px;font-weight:700;letter-spacing:-.3px}
+.logo-sub{font-size:10px;color:var(--text3);font-weight:400;margin-top:1px}
+.nav{flex:1;padding:14px 10px;overflow-y:auto}
+.nav-section{font-size:9.5px;color:var(--text3);text-transform:uppercase;letter-spacing:1.4px;padding:10px 10px 5px;font-weight:600}
+.nav-item{display:flex;align-items:center;gap:10px;padding:9px 12px;border-radius:10px;cursor:pointer;font-size:13px;color:var(--text2);font-weight:500;transition:all .15s;margin-bottom:2px;position:relative}
+.nav-item:hover{background:var(--surface2);color:var(--text)}
+.nav-item.active{background:linear-gradient(90deg,rgba(0,191,255,.14),rgba(123,97,255,.1));color:var(--accent);border:1px solid rgba(0,191,255,.15)}
+.nav-item .ni{font-size:16px;width:22px;text-align:center}
+.nav-badge{margin-left:auto;background:var(--accent);color:#000;font-size:9px;font-weight:700;padding:2px 6px;border-radius:8px;min-width:18px;text-align:center}
+.nav-badge.red{background:var(--red);color:#fff}
+.sidebar-user{padding:14px;border-top:1px solid var(--border);display:flex;align-items:center;gap:10px}
+.user-av{width:34px;height:34px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
+.user-name{font-size:13px;font-weight:600;line-height:1.2}
+.user-role{font-size:10px;color:var(--text3)}
+.logout-btn{margin-left:auto;cursor:pointer;color:var(--text3);font-size:18px;transition:color .15s;background:none;border:none;padding:4px}
+.logout-btn:hover{color:var(--red)}
+
+/* ── MAIN ── */
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden;min-width:0}
+.topbar{height:56px;border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 20px;gap:12px;flex-shrink:0;background:rgba(7,11,20,0.7);backdrop-filter:blur(16px)}
+.topbar-menu{display:none;background:none;border:none;color:var(--text2);font-size:22px;cursor:pointer;padding:4px;margin-right:4px}
+.page-title{font-size:15px;font-weight:700}
+.page-sub{font-size:11px;color:var(--text3);margin-left:4px}
+.topbar-right{margin-left:auto;display:flex;align-items:center;gap:8px}
+.search-wrap{position:relative}
+.search-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:9px;padding:7px 12px 7px 34px;font-family:inherit;font-size:12.5px;outline:none;width:200px;transition:border .15s}
+.search-input:focus{border-color:var(--border2)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:14px;pointer-events:none}
+.content{flex:1;overflow-y:auto;padding:22px;scroll-behavior:smooth}
+.content::-webkit-scrollbar{width:5px}
+.content::-webkit-scrollbar-track{background:transparent}
+.content::-webkit-scrollbar-thumb{background:var(--text3);border-radius:10px}
+
+/* ── BUTTONS ── */
+.btn{padding:8px 16px;border-radius:9px;border:none;cursor:pointer;font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;transition:all .17s;display:inline-flex;align-items:center;gap:6px}
+.btn-primary{background:linear-gradient(135deg,var(--accent),#0099dd);color:#000;box-shadow:0 0 18px rgba(0,191,255,.25)}
+.btn-primary:hover{box-shadow:0 0 28px rgba(0,191,255,.45);transform:translateY(-1px)}
+.btn-accent2{background:linear-gradient(135deg,var(--accent2),#5a40cc);color:#fff}
+.btn-accent2:hover{opacity:.9;transform:translateY(-1px)}
+.btn-ghost{background:var(--surface2);color:var(--text2);border:1px solid var(--border)}
+.btn-ghost:hover{color:var(--text);border-color:var(--border2)}
+.btn-danger{background:rgba(255,95,126,.15);color:var(--red);border:1px solid rgba(255,95,126,.25)}
+.btn-danger:hover{background:rgba(255,95,126,.25)}
+.btn-success{background:rgba(0,229,160,.15);color:var(--green);border:1px solid rgba(0,229,160,.25)}
+.btn-success:hover{background:rgba(0,229,160,.25)}
+.btn-sm{padding:5px 11px;font-size:12px;border-radius:7px}
+.btn-icon{padding:7px;border-radius:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text2);cursor:pointer;transition:all .15s;font-size:16px;line-height:1;display:inline-flex;align-items:center}
+.btn-icon:hover{color:var(--text);border-color:var(--border2)}
+
+/* ── CARDS ── */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);backdrop-filter:blur(18px);overflow:hidden}
+.card-pad{padding:20px}
+.card-header{display:flex;align-items:center;gap:10px;padding:16px 20px;border-bottom:1px solid var(--border)}
+.card-title{font-size:14px;font-weight:700}
+.card-sub{font-size:11px;color:var(--text3)}
+.card-actions{margin-left:auto;display:flex;gap:8px}
+
+/* ── STATS ROW ── */
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:18px 20px;backdrop-filter:blur(18px);position:relative;overflow:hidden;transition:border-color .2s}
+.stat-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity .2s;border-radius:var(--radius)}
+.stat-card:hover{border-color:var(--border2)}
+.stat-icon{font-size:22px;margin-bottom:10px}
+.stat-val{font-size:28px;font-weight:700;font-family:'JetBrains Mono',monospace;line-height:1}
+.stat-label{font-size:11px;color:var(--text2);margin-top:4px;font-weight:500}
+.stat-glow{position:absolute;top:-20px;right:-20px;width:80px;height:80px;border-radius:50%;filter:blur(30px);opacity:.35}
+
+/* ── TABLE ── */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{padding:10px 14px;text-align:left;font-size:10.5px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:11px 14px;border-bottom:1px solid rgba(0,191,255,.05);vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(0,191,255,.03)}
+
+/* ── BADGES / CHIPS ── */
+.badge{display:inline-block;padding:3px 9px;border-radius:6px;font-size:11px;font-weight:600}
+.badge-blue{background:rgba(0,191,255,.12);color:var(--accent);border:1px solid rgba(0,191,255,.2)}
+.badge-purple{background:rgba(123,97,255,.12);color:var(--accent2);border:1px solid rgba(123,97,255,.2)}
+.badge-green{background:rgba(0,229,160,.12);color:var(--green);border:1px solid rgba(0,229,160,.2)}
+.badge-orange{background:rgba(255,159,67,.12);color:var(--orange);border:1px solid rgba(255,159,67,.2)}
+.badge-red{background:rgba(255,95,126,.12);color:var(--red);border:1px solid rgba(255,95,126,.2)}
+.badge-gray{background:rgba(120,130,160,.1);color:var(--text2);border:1px solid var(--border)}
+.chip{display:inline-block;background:var(--surface3);border:1px solid var(--border);color:var(--text2);padding:2px 8px;border-radius:6px;font-size:11px;margin:1px}
+
+/* ── LOGIN ── */
+.login-screen{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:var(--bg)}
+.login-box{background:var(--surface);border:1px solid var(--border2);border-radius:20px;padding:44px;width:380px;max-width:94vw;backdrop-filter:blur(30px);box-shadow:var(--shadow),0 0 80px rgba(0,191,255,.08)}
+.login-head{display:flex;align-items:center;gap:14px;margin-bottom:32px}
+.login-logo-icon{width:50px;height:50px;border-radius:13px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-size:24px;box-shadow:0 0 30px rgba(0,191,255,.4)}
+.login-logo-text{font-size:22px;font-weight:700;letter-spacing:-.5px}
+.login-logo-sub{font-size:12px;color:var(--text3);margin-top:2px}
+.form-group{margin-bottom:16px}
+.form-label{font-size:11.5px;font-weight:600;color:var(--text2);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:.5px}
+.form-input{width:100%;padding:11px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:14px;outline:none;transition:border .15s}
+.form-input:focus{border-color:var(--accent);box-shadow:0 0 0 3px rgba(0,191,255,.1)}
+.form-select{width:100%;padding:11px 14px;border-radius:10px;background:var(--surface2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:14px;outline:none;appearance:none;cursor:pointer}
+.form-select:focus{border-color:var(--accent)}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.err-msg{background:rgba(255,95,126,.1);border:1px solid rgba(255,95,126,.25);color:var(--red);padding:10px 13px;border-radius:9px;font-size:13px;margin-bottom:12px}
+.ok-msg{background:rgba(0,229,160,.1);border:1px solid rgba(0,229,160,.25);color:var(--green);padding:10px 13px;border-radius:9px;font-size:13px;margin-bottom:12px}
+
+/* ── MODAL ── */
+.modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(4,7,18,.75);display:flex;align-items:center;justify-content:center;backdrop-filter:blur(6px);padding:16px}
+.modal{background:var(--bg2);border:1px solid var(--border2);border-radius:18px;padding:28px;width:100%;max-width:520px;max-height:90vh;overflow-y:auto;box-shadow:var(--shadow),0 0 60px rgba(0,191,255,.07)}
+.modal::-webkit-scrollbar{width:4px}
+.modal::-webkit-scrollbar-thumb{background:var(--text3);border-radius:6px}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:4px}
+.modal-sub{font-size:12px;color:var(--text3);margin-bottom:20px}
+.modal-footer{display:flex;justify-content:flex-end;gap:10px;margin-top:22px}
+
+/* ── TOAST ── */
+.toast-area{position:fixed;bottom:24px;right:24px;z-index:300;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{background:var(--surface);border:1px solid var(--border2);border-radius:11px;padding:12px 18px;font-size:13px;font-weight:500;backdrop-filter:blur(20px);box-shadow:var(--shadow);animation:toastin .3s ease;pointer-events:all;display:flex;align-items:center;gap:8px;max-width:320px}
+.toast.ok{border-color:rgba(0,229,160,.35);color:var(--green)}
+.toast.err{border-color:rgba(255,95,126,.35);color:var(--red)}
+.toast.info{border-color:rgba(0,191,255,.3);color:var(--accent)}
+@keyframes toastin{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:translateX(0)}}
+
+/* ── EMPTY STATE ── */
+.empty{text-align:center;padding:52px 20px;color:var(--text3)}
+.empty-icon{font-size:40px;margin-bottom:12px;opacity:.5}
+.empty p{font-size:13px}
+
+/* ── AI PANEL ── */
+.ai-panel{background:linear-gradient(135deg,rgba(123,97,255,.1),rgba(0,191,255,.06));border:1px solid rgba(123,97,255,.22);border-radius:var(--radius);padding:18px 20px;margin-bottom:20px}
+.ai-panel-head{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+.ai-dot{width:8px;height:8px;border-radius:50%;background:var(--accent2);box-shadow:0 0 8px var(--accent2);animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.6;transform:scale(.85)}}
+.ai-label{font-size:12px;font-weight:700;color:var(--accent2);text-transform:uppercase;letter-spacing:.8px}
+.ai-items{display:flex;flex-direction:column;gap:8px}
+.ai-item{display:flex;align-items:flex-start;gap:10px;background:rgba(0,0,0,.25);border-radius:9px;padding:10px 13px}
+.ai-item-icon{font-size:16px;margin-top:1px;flex-shrink:0}
+.ai-item-text{font-size:12.5px;color:var(--text);line-height:1.5}
+.ai-item-text strong{color:var(--accent);font-weight:600}
+.ai-thinking{display:flex;align-items:center;gap:10px;font-size:12px;color:var(--text3);padding:8px 0}
+.ai-dots{display:flex;gap:4px}
+.ai-dots span{width:5px;height:5px;border-radius:50%;background:var(--accent2);animation:aidot 1.2s infinite}
+.ai-dots span:nth-child(2){animation-delay:.2s}
+.ai-dots span:nth-child(3){animation-delay:.4s}
+@keyframes aidot{0%,80%,100%{opacity:.2;transform:scale(.8)}40%{opacity:1;transform:scale(1)}}
+
+/* ── TIMETABLE GRID ── */
+.tt-grid{overflow-x:auto}
+.tt-table{min-width:680px;border-collapse:separate;border-spacing:3px}
+.tt-table th{padding:9px 12px;font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:.8px;text-align:center;background:rgba(0,191,255,.04);border-radius:6px}
+.tt-table .period-col{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);font-weight:500;text-align:center;padding:9px 8px;white-space:nowrap}
+.tt-cell{background:var(--surface2);border-radius:8px;padding:8px 10px;font-size:11.5px;min-height:56px;vertical-align:top}
+.tt-cell.empty{background:rgba(255,255,255,.02)}
+.tt-slot{background:var(--surface3);border:1px solid var(--border);border-radius:6px;padding:6px 8px;margin-bottom:3px}
+.tt-slot-teacher{font-weight:600;font-size:12px}
+.tt-slot-info{color:var(--text3);font-size:11px;margin-top:1px}
+
+/* ── NOTIFICATIONS ── */
+.notif-list{display:flex;flex-direction:column;gap:10px}
+.notif-item{display:flex;gap:14px;align-items:flex-start;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:14px 16px;transition:border-color .15s}
+.notif-item:hover{border-color:var(--border2)}
+.notif-item.unread{border-color:rgba(0,191,255,.2);background:rgba(0,191,255,.04)}
+.notif-dot{width:8px;height:8px;border-radius:50%;background:var(--accent);flex-shrink:0;margin-top:5px}
+.notif-dot.read{background:var(--text3)}
+.notif-body{flex:1}
+.notif-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.notif-msg{font-size:12px;color:var(--text2);line-height:1.5}
+.notif-time{font-size:11px;color:var(--text3);margin-top:4px;font-family:'JetBrains Mono',monospace}
+
+/* ── MOBILE OVERLAY ── */
+.sidebar-overlay{display:none;position:fixed;inset:0;z-index:49;background:rgba(4,7,18,.7);backdrop-filter:blur(4px)}
+
+/* ── RESPONSIVE ── */
+@media(max-width:900px){
+  :root{--sidebar-w:240px}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .sidebar{position:fixed;top:0;left:0;height:100%;transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .sidebar-overlay.open{display:block}
+  .topbar-menu{display:flex;align-items:center}
+  .search-input{width:140px}
+  .form-row{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .stats-grid{grid-template-columns:repeat(2,1fr);gap:10px}
+  .stat-val{font-size:24px}
+  .content{padding:14px}
+  .topbar{padding:0 14px}
+  .search-input{width:120px}
+  .modal{padding:20px}
+  .login-box{padding:28px 22px}
+}
+
+/* ── AI UPLOAD PAGE ── */
+.upload-drop{border:2px dashed var(--border2);border-radius:var(--radius);padding:52px 24px;text-align:center;cursor:pointer;transition:all .2s;position:relative;background:rgba(0,191,255,.02)}
+.upload-drop:hover,.upload-drop.drag{border-color:var(--accent);background:rgba(0,191,255,.05)}
+.upload-drop input{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%}
+.upload-icon{font-size:44px;margin-bottom:14px}
+.upload-title{font-size:15px;font-weight:600;margin-bottom:6px}
+.upload-sub{font-size:13px;color:var(--text3)}
+.preview-table{width:100%;border-collapse:collapse;font-size:12px;margin-top:14px}
+.preview-table th{background:rgba(0,191,255,.1);padding:8px 12px;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--accent)}
+.preview-table td{padding:8px 12px;border-bottom:1px solid var(--border)}
+.preview-table tr:last-child td{border-bottom:none}
+
+/* ── FREE TEACHERS PANEL ── */
+.free-grid{display:flex;flex-wrap:wrap;gap:10px;margin-top:14px}
+.free-card{background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:12px 14px;display:flex;align-items:center;gap:10px;min-width:160px}
+.free-av{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:700;flex-shrink:0}
+.free-name{font-size:13px;font-weight:600}
+.free-subj{font-size:11px;color:var(--text3)}
+
+/* ── SKELETON ── */
+.skel{background:linear-gradient(90deg,var(--surface2) 25%,var(--surface3) 50%,var(--surface2) 75%);background-size:400% 100%;animation:skel 1.4s ease infinite;border-radius:6px}
+@keyframes skel{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+</style>
+</head>
+<body>
+
+<!-- BG -->
+<div class="bg-wrap">
+  <div class="orb orb1"></div>
+  <div class="orb orb2"></div>
+  <div class="orb orb3"></div>
+  <div class="grid-bg"></div>
+</div>
+
+<!-- LOGIN -->
+<div class="login-screen" id="login-screen">
+  <div class="login-box">
+    <div class="login-head">
+      <div class="login-logo-icon">🔁</div>
+      <div>
+        <div class="login-logo-text">SubSwap</div>
+        <div class="login-logo-sub">AI School Scheduling Platform</div>
+      </div>
+    </div>
+    <div id="login-err"></div>
+    <div class="form-group">
+      <label class="form-label">Email Address</label>
+      <input class="form-input" id="li-email" type="email" placeholder="admin@school.com" value="admin@school.com">
+    </div>
+    <div class="form-group">
+      <label class="form-label">Password</label>
+      <input class="form-input" id="li-pass" type="password" placeholder="••••••••" value="admin123">
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:12px;font-size:14px;margin-top:4px" id="li-btn">
+      Sign In →
+    </button>
+    <div style="margin-top:16px;text-align:center;font-size:11.5px;color:var(--text3)">
+      Backend: <span style="color:var(--accent);font-family:'JetBrains Mono',monospace">subapp-c640.onrender.com</span>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app" id="app" style="display:none">
+  <div class="sidebar-overlay" id="sb-overlay"></div>
+  <nav class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon">🔁</div>
+      <div>
+        <div class="logo-text">SubSwap</div>
+        <div class="logo-sub">AI Scheduling</div>
+      </div>
+    </div>
+    <div class="nav">
+      <div class="nav-section">Overview</div>
+      <div class="nav-item active" data-page="dashboard">
+        <span class="ni">📊</span> Dashboard
+      </div>
+      <div class="nav-item" data-page="notifications">
+        <span class="ni">🔔</span> Notifications
+        <span class="nav-badge red" id="nb-notif">0</span>
+      </div>
+      <div class="nav-section">Management</div>
+      <div class="nav-item" data-page="teachers">
+        <span class="ni">👩‍🏫</span> Teachers
+      </div>
+      <div class="nav-item" data-page="classes">
+        <span class="ni">🏛️</span> Classes
+      </div>
+      <div class="nav-item" data-page="schedule">
+        <span class="ni">📅</span> Timetable
+      </div>
+      <div class="nav-section">Operations</div>
+      <div class="nav-item" data-page="absences">
+        <span class="ni">🚫</span> Absences
+        <span class="nav-badge" id="nb-abs">0</span>
+      </div>
+      <div class="nav-item" data-page="substitutions">
+        <span class="ni">🔄</span> Substitutions
+        <span class="nav-badge" id="nb-sub">0</span>
+      </div>
+      <div class="nav-item" data-page="free-teachers">
+        <span class="ni">✅</span> Free Teachers
+      </div>
+      <div class="nav-section">AI Tools</div>
+      <div class="nav-item" data-page="ai-upload">
+        <span class="ni">🤖</span> AI Timetable
+      </div>
+      <div class="nav-item" data-page="ai-assist">
+        <span class="ni">✨</span> AI Assistant
+      </div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-av" id="user-av">A</div>
+      <div>
+        <div class="user-name" id="user-name">Admin</div>
+        <div class="user-role" id="user-role">Administrator</div>
+      </div>
+      <button class="logout-btn" id="logout-btn" title="Logout">⏻</button>
+    </div>
+  </nav>
+
+  <div class="main">
+    <div class="topbar">
+      <button class="topbar-menu" id="menu-btn">☰</button>
+      <div>
+        <span class="page-title" id="topbar-title">Dashboard</span>
+        <span class="page-sub" id="topbar-sub"></span>
+      </div>
+      <div class="topbar-right">
+        <div class="search-wrap">
+          <span class="search-icon">🔍</span>
+          <input class="search-input" id="search-inp" placeholder="Search…">
+        </div>
+        <button class="btn-icon" id="refresh-btn" title="Refresh">↻</button>
+      </div>
+    </div>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- TOAST AREA -->
+<div class="toast-area" id="toast-area"></div>
+
+<!-- MODAL CONTAINER -->
+<div id="modal-root"></div>
+
+<script>
+const API = 'https://subapp-c640.onrender.com';
+
+// ── STATE ─────────────────────────────────────────────────────────────────────
+let state = {
+  page:'dashboard', token:null, user:null,
+  teachers:[], classes:[], schedules:[], absences:[], substitutions:[],
+  search:'', loading:false, notifications:[]
+};
+
+// restore session
+try {
+  const s = JSON.parse(sessionStorage.getItem('subswap')||'{}');
+  if(s.token && s.user){ state.token=s.token; state.user=s.user; }
+} catch(e){}
+
+// ── API ───────────────────────────────────────────────────────────────────────
+async function req(method, path, body){
+  const headers = {'Content-Type':'application/json'};
+  if(state.token) headers['Authorization']='Bearer '+state.token;
+  const r = await fetch(API+path, {method, headers, body:body?JSON.stringify(body):undefined});
+  const data = await r.json().catch(()=>({}));
+  if(!r.ok) throw new Error(data.detail || 'Request failed');
+  return data;
+}
+
+// ── AUTH ──────────────────────────────────────────────────────────────────────
+async function login(){
+  const email = document.getElementById('li-email').value.trim();
+  const pass  = document.getElementById('li-pass').value;
+  const btn   = document.getElementById('li-btn');
+  const err   = document.getElementById('login-err');
+  err.innerHTML=''; btn.disabled=true; btn.textContent='Signing in…';
+  try {
+    const data = await req('POST','/api/auth/login',{email,password:pass});
+    state.token = data.access_token;
+    state.user  = data.teacher;
+    sessionStorage.setItem('subswap',JSON.stringify({token:state.token,user:state.user}));
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    updateUserUI();
+    await loadAll();
+    renderPage();
+    toast('Welcome back, '+state.user.name+'!','ok');
+  } catch(e){
+    err.innerHTML=`<div class="err-msg">⚠ ${e.message}</div>`;
+    btn.disabled=false; btn.textContent='Sign In →';
+  }
+}
+function logout(){
+  state.token=null; state.user=null;
+  sessionStorage.removeItem('subswap');
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  state.teachers=[]; state.classes=[]; state.schedules=[]; state.absences=[]; state.substitutions=[];
+}
+function updateUserUI(){
+  if(!state.user) return;
+  document.getElementById('user-av').textContent = state.user.name[0].toUpperCase();
+  document.getElementById('user-name').textContent = state.user.name;
+  document.getElementById('user-role').textContent = state.user.is_admin?'Administrator':'Teacher';
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────────────────────────
+async function loadAll(){
+  try {
+    const [teachers,classes,schedules,absences,subs] = await Promise.all([
+      req('GET','/api/teachers'),
+      req('GET','/api/classes'),
+      req('GET','/api/schedules'),
+      req('GET','/api/absences'),
+      req('GET','/api/substitutions'),
+    ]);
+    state.teachers     = teachers;
+    state.classes      = classes;
+    state.schedules    = schedules;
+    state.absences     = absences;
+    state.substitutions = subs;
+    updateBadges();
+    buildNotifications();
+    renderPage();
+  } catch(e){ toast('Failed to load data: '+e.message,'err'); }
+}
+function updateBadges(){
+  const todayAbs = state.absences.filter(a=>a.date===today()).length;
+  const pendSubs = state.substitutions.filter(s=>s.status==='assigned').length;
+  document.getElementById('nb-abs').textContent = todayAbs;
+  document.getElementById('nb-sub').textContent = pendSubs;
+  document.getElementById('nb-notif').textContent = state.notifications.filter(n=>!n.read).length||0;
+}
+function buildNotifications(){
+  const existing = new Set(state.notifications.map(n=>n.id));
+  state.absences.forEach(a=>{
+    const id='abs-'+a.id;
+    if(!existing.has(id)){
+      state.notifications.unshift({id,read:false,title:'Absence reported',
+        msg:`${a.teacher_name} absent on ${fmt(a.date)} · Periods ${a.periods}`,
+        time:a.created_at||new Date().toISOString(),icon:'🚫'});
+    }
+  });
+  state.substitutions.filter(s=>s.status==='assigned').forEach(s=>{
+    const id='sub-'+s.id;
+    if(!existing.has(id)){
+      state.notifications.unshift({id,read:false,title:'Substitute assigned',
+        msg:`${s.substitute_name} → ${s.class_name} P${s.period} on ${fmt(s.date)}`,
+        time:s.created_at||new Date().toISOString(),icon:'🔄'});
+    }
+  });
+  state.notifications = state.notifications.slice(0,30);
+  updateBadges();
+}
+
+// ── RENDER ENGINE ─────────────────────────────────────────────────────────────
+function renderPage(){
+  const c = document.getElementById('content');
+  const titles = {
+    dashboard:'Dashboard', notifications:'Notifications', teachers:'Teachers',
+    classes:'Classes', schedule:'Timetable', absences:'Absences',
+    substitutions:'Substitutions', 'free-teachers':'Free Teachers',
+    'ai-upload':'AI Timetable Upload', 'ai-assist':'AI Assistant'
+  };
+  const subs = {
+    dashboard:'Today\'s overview',
+    teachers: state.teachers.length+' staff members',
+    classes: state.classes.length+' classes',
+    schedule: state.schedules.length+' schedule slots',
+    absences: state.absences.length+' total absences',
+    substitutions: state.substitutions.length+' total substitutions',
+    'free-teachers': 'Available right now',
+    'ai-upload': 'OCR-powered schedule parser',
+    'ai-assist': 'Smart scheduling recommendations',
+    notifications: state.notifications.length+' notifications'
+  };
+  document.getElementById('topbar-title').textContent = titles[state.page]||state.page;
+  document.getElementById('topbar-sub').textContent   = subs[state.page]||'';
+  document.querySelectorAll('.nav-item').forEach(el=>{
+    el.classList.toggle('active', el.dataset.page===state.page);
+  });
+  const pages = {
+    dashboard:    pageDashboard,
+    notifications:pageNotifications,
+    teachers:     pageTeachers,
+    classes:      pageClasses,
+    schedule:     pageSchedule,
+    absences:     pageAbsences,
+    substitutions:pageSubstitutions,
+    'free-teachers': pageFreeTeachers,
+    'ai-upload':  pageAIUpload,
+    'ai-assist':  pageAIAssist,
+  };
+  c.innerHTML = (pages[state.page]||pageDashboard)();
+  attachEvents();
+  closeSidebar();
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+function today(){ return new Date().toISOString().slice(0,10); }
+function fmt(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString('en-IN',{day:'2-digit',month:'short',year:'numeric'}); }catch(e){ return d; } }
+function dayName(d){ try{ return new Date(d+'T00:00:00').toLocaleDateString('en-US',{weekday:'long'}); }catch(e){ return ''; } }
+function initials(name){ return name.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase(); }
+function statusBadge(s){
+  const map = {assigned:'badge-blue',confirmed:'badge-green',completed:'badge-gray',cancelled:'badge-red'};
+  return `<span class="badge ${map[s]||'badge-gray'}">${s}</span>`;
+}
+function isAdmin(){ return state.user?.is_admin; }
+
+// ── PAGE: DASHBOARD ───────────────────────────────────────────────────────────
+function pageDashboard(){
+  const todayAbs   = state.absences.filter(a=>a.date===today());
+  const todaySubs  = state.substitutions.filter(s=>s.date===today());
+  const pendSubs   = state.substitutions.filter(s=>s.status==='assigned');
+  const freeCnt    = state.teachers.filter(t=>!t.is_admin).length;
+  const recentSubs = [...state.substitutions].sort((a,b)=>b.date.localeCompare(a.date)).slice(0,6);
+
+  return `
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-glow" style="background:#ff5f7e"></div>
+      <div class="stat-icon">🚫</div>
+      <div class="stat-val" style="color:var(--red)">${todayAbs.length}</div>
+      <div class="stat-label">Today's Absences</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-glow" style="background:#00bfff"></div>
+      <div class="stat-icon">🔄</div>
+      <div class="stat-val" style="color:var(--accent)">${todaySubs.length}</div>
+      <div class="stat-label">Today's Substitutions</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-glow" style="background:#ffd32a"></div>
+      <div class="stat-icon">⏳</div>
+      <div class="stat-val" style="color:var(--yellow)">${pendSubs.length}</div>
+      <div class="stat-label">Pending Confirmation</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-glow" style="background:#00e5a0"></div>
+      <div class="stat-icon">👩‍🏫</div>
+      <div class="stat-val" style="color:var(--green)">${freeCnt}</div>
+      <div class="stat-label">Total Teachers</div>
+    </div>
+  </div>
+
+  <div class="ai-panel" id="ai-panel">
+    <div class="ai-panel-head">
+      <div class="ai-dot"></div>
+      <div class="ai-label">AI Insights</div>
+      <button class="btn btn-sm btn-ghost" style="margin-left:auto" onclick="refreshAI()">⟳ Refresh</button>
+    </div>
+    <div class="ai-items" id="ai-items">
+      <div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> Analysing schedule…</div>
+    </div>
+  </div>
+
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Today's Absences</div>
+        <div class="card-sub">${today()}</div>
+        ${isAdmin()?`<div class="card-actions"><button class="btn btn-sm btn-primary" id="open-report">+ Report</button></div>`:''}
+      </div>
+      ${todayAbs.length===0?`<div class="empty"><div class="empty-icon">✅</div><p>No absences today</p></div>`:`
+      <div class="table-wrap"><table>
+        <tr><th>Teacher</th><th>Periods</th><th>Reason</th></tr>
+        ${todayAbs.map(a=>`<tr>
+          <td><strong>${a.teacher_name}</strong></td>
+          <td>${a.periods.split(',').map(p=>`<span class="chip">P${p.trim()}</span>`).join(' ')}</td>
+          <td style="color:var(--text2);font-size:12px">${a.reason||'—'}</td>
+        </tr>`).join('')}
+      </table></div>`}
+    </div>
+    <div class="card">
+      <div class="card-header">
+        <div class="card-title">Recent Substitutions</div>
+        <div class="card-sub">Latest activity</div>
+      </div>
+      ${recentSubs.length===0?`<div class="empty"><div class="empty-icon">🔄</div><p>No substitutions yet</p></div>`:`
+      <div class="table-wrap"><table>
+        <tr><th>Date</th><th>Substitute</th><th>Class</th><th>Status</th></tr>
+        ${recentSubs.map(s=>`<tr>
+          <td style="font-size:12px;color:var(--text2);font-family:'JetBrains Mono',monospace">${fmt(s.date)}</td>
+          <td><strong>${s.substitute_name}</strong></td>
+          <td><span class="badge badge-blue">${s.class_name}</span></td>
+          <td>${statusBadge(s.status)}</td>
+        </tr>`).join('')}
+      </table></div>`}
+    </div>
+  </div>`;
+}
+
+// ── PAGE: TEACHERS ────────────────────────────────────────────────────────────
+function pageTeachers(){
+  let rows = state.teachers;
+  if(state.search){ const q=state.search.toLowerCase(); rows=rows.filter(t=>t.name.toLowerCase().includes(q)||t.email.toLowerCase().includes(q)||t.subjects.toLowerCase().includes(q)); }
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Staff Directory</div>
+      <div class="card-sub">${rows.length} members</div>
+      ${isAdmin()?`<div class="card-actions"><button class="btn btn-sm btn-primary" id="open-add-teacher">+ Add Teacher</button></div>`:''}
+    </div>
+    ${rows.length===0?`<div class="empty"><div class="empty-icon">👩‍🏫</div><p>No teachers found</p></div>`:`
+    <div class="table-wrap"><table>
+      <tr><th>#</th><th>Name</th><th>Email</th><th>Subjects</th><th>Role</th><th>Joined</th>${isAdmin()?'<th></th>':''}</tr>
+      ${rows.map(t=>`<tr>
+        <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:12px">${t.id}</td>
+        <td><div style="display:flex;align-items:center;gap:9px">
+          <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--accent2),var(--accent));display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0">${initials(t.name)}</div>
+          <strong>${t.name}</strong>
+        </div></td>
+        <td style="color:var(--text2);font-size:12px">${t.email}</td>
+        <td>${t.subjects.split(',').map(s=>`<span class="chip">${s.trim()}</span>`).join(' ')}</td>
+        <td>${t.is_admin?'<span class="badge badge-purple">Admin</span>':'<span class="badge badge-gray">Teacher</span>'}</td>
+        <td style="color:var(--text3);font-size:12px;font-family:'JetBrains Mono',monospace">${(t.created_at||'').slice(0,10)||'—'}</td>
+        ${isAdmin()?`<td>${t.email!=='admin@school.com'?`<button class="btn btn-sm btn-danger" data-del-teacher="${t.id}">Remove</button>`:''}</td>`:''}
+      </tr>`).join('')}
+    </table></div>`}
+  </div>`;
+}
+
+// ── PAGE: CLASSES ─────────────────────────────────────────────────────────────
+function pageClasses(){
+  let rows = state.classes;
+  if(state.search){ const q=state.search.toLowerCase(); rows=rows.filter(c=>c.name.toLowerCase().includes(q)); }
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Class Registry</div>
+      <div class="card-sub">${rows.length} classes</div>
+      ${isAdmin()?`<div class="card-actions"><button class="btn btn-sm btn-primary" id="open-add-class">+ Add Class</button></div>`:''}
+    </div>
+    ${rows.length===0?`<div class="empty"><div class="empty-icon">🏛️</div><p>No classes added yet</p></div>`:`
+    <div class="table-wrap"><table>
+      <tr><th>#</th><th>Class Name</th><th>Grade</th><th>Section</th><th>Schedule Slots</th></tr>
+      ${rows.map(c=>{
+        const slots = state.schedules.filter(s=>s.class_id===c.id).length;
+        return `<tr>
+          <td style="color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:12px">${c.id}</td>
+          <td><strong>${c.name}</strong></td>
+          <td><span class="badge badge-blue">Grade ${c.grade}</span></td>
+          <td><span class="badge badge-purple">${c.section}</span></td>
+          <td><span class="badge badge-gray">${slots} slots</span></td>
+        </tr>`;
+      }).join('')}
+    </table></div>`}
+  </div>`;
+}
+
+// ── PAGE: SCHEDULE ────────────────────────────────────────────────────────────
+function pageSchedule(){
+  const days=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+  const periods=[1,2,3,4,5,6,7,8];
+  return `
+  <div class="card" style="margin-bottom:16px">
+    <div class="card-header">
+      <div class="card-title">Weekly Timetable</div>
+      <div class="card-sub">${state.schedules.length} slots configured</div>
+      ${isAdmin()?`<div class="card-actions">
+        <button class="btn btn-sm btn-ghost" id="open-add-sched-class">+ By Class</button>
+        <button class="btn btn-sm btn-primary" id="open-add-schedule">+ Add Slot</button>
+      </div>`:''}
+    </div>
+    <div class="card-pad tt-grid">
+      <table class="tt-table">
+        <tr>
+          <th style="width:60px">Period</th>
+          ${days.map(d=>`<th>${d}</th>`).join('')}
+        </tr>
+        ${periods.map(p=>`<tr>
+          <td class="period-col">P${p}</td>
+          ${days.map(d=>{
+            const slots = state.schedules.filter(s=>s.day===d&&s.period===p);
+            return `<td class="tt-cell ${slots.length===0?'empty':''}">
+              ${slots.map(s=>`<div class="tt-slot">
+                <div class="tt-slot-teacher">${s.teacher_name}</div>
+                <div class="tt-slot-info">${s.class_name} · ${s.subject}</div>
+              </div>`).join('')}
+              ${slots.length===0?'<span style="color:var(--text3);font-size:11px">—</span>':''}
+            </td>`;
+          }).join('')}
+        </tr>`).join('')}
+      </table>
+    </div>
+  </div>`;
+}
+
+// ── PAGE: ABSENCES ────────────────────────────────────────────────────────────
+function pageAbsences(){
+  let rows = [...state.absences].sort((a,b)=>b.date.localeCompare(a.date));
+  if(state.search){ const q=state.search.toLowerCase(); rows=rows.filter(a=>a.teacher_name?.toLowerCase().includes(q)||(a.reason||'').toLowerCase().includes(q)); }
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Absence Records</div>
+      <div class="card-sub">${rows.length} total</div>
+      <div class="card-actions">
+        <button class="btn btn-sm btn-primary" id="open-report">🚫 Report Absence</button>
+        ${isAdmin()?`<button class="btn btn-sm btn-ghost" id="open-manual-sub">Manual Assign</button>`:''}
+      </div>
+    </div>
+    ${rows.length===0?`<div class="empty"><div class="empty-icon">✅</div><p>No absences recorded yet</p></div>`:`
+    <div class="table-wrap"><table>
+      <tr><th>Teacher</th><th>Date</th><th>Day</th><th>Periods</th><th>Reason</th><th>Auto-assigned</th><th>Reported</th></tr>
+      ${rows.map(a=>{
+        const autoCount = state.substitutions.filter(s=>s.absence_id===a.id).length;
+        return `<tr>
+          <td><strong>${a.teacher_name}</strong></td>
+          <td style="font-family:'JetBrains Mono',monospace;font-size:12px">${fmt(a.date)}</td>
+          <td style="color:var(--text2)">${dayName(a.date)}</td>
+          <td>${a.periods.split(',').map(p=>`<span class="chip">P${p.trim()}</span>`).join(' ')}</td>
+          <td style="color:var(--text2);font-size:12px">${a.reason||'—'}</td>
+          <td>${autoCount>0?`<span class="badge badge-green">${autoCount} assigned</span>`:'<span class="badge badge-red">Unassigned</span>'}</td>
+          <td style="color:var(--text3);font-size:11px;font-family:'JetBrains Mono',monospace">${(a.created_at||'').slice(0,16)||'—'}</td>
+        </tr>`;
+      }).join('')}
+    </table></div>`}
+  </div>`;
+}
+
+// ── PAGE: SUBSTITUTIONS ───────────────────────────────────────────────────────
+function pageSubstitutions(){
+  let rows = [...state.substitutions].sort((a,b)=>b.date.localeCompare(a.date));
+  if(state.search){ const q=state.search.toLowerCase(); rows=rows.filter(s=>s.substitute_name?.toLowerCase().includes(q)||s.absent_teacher_name?.toLowerCase().includes(q)||s.class_name?.toLowerCase().includes(q)||s.subject?.toLowerCase().includes(q)); }
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">All Substitutions</div>
+      <div class="card-sub">${rows.length} entries</div>
+      ${isAdmin()?`<div class="card-actions"><button class="btn btn-sm btn-primary" id="open-manual-sub">+ Manual Assign</button></div>`:''}
+    </div>
+    ${rows.length===0?`<div class="empty"><div class="empty-icon">🔄</div><p>No substitutions yet</p></div>`:`
+    <div class="table-wrap"><table>
+      <tr><th>Date</th><th>Period</th><th>Absent</th><th>Substitute</th><th>Class</th><th>Subject</th><th>Status</th><th>Actions</th></tr>
+      ${rows.map(s=>`<tr>
+        <td style="font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--text2)">${fmt(s.date)}</td>
+        <td><span class="chip">P${s.period}</span></td>
+        <td style="color:var(--text3);font-size:12px">${s.absent_teacher_name}</td>
+        <td><strong>${s.substitute_name}</strong></td>
+        <td><span class="badge badge-blue">${s.class_name}</span></td>
+        <td style="color:var(--text2)">${s.subject}</td>
+        <td>${statusBadge(s.status)}</td>
+        <td style="display:flex;gap:6px;align-items:center">
+          ${s.status==='assigned'?`<button class="btn btn-sm btn-success" data-confirm="${s.id}">✓ Confirm</button>`:''}
+          ${s.status==='confirmed'?`<button class="btn btn-sm btn-ghost" data-complete="${s.id}">✓ Complete</button>`:''}
+          ${s.status==='assigned'||s.status==='confirmed'?`<button class="btn btn-sm btn-danger" data-cancel="${s.id}">✕</button>`:''}
+        </td>
+      </tr>`).join('')}
+    </table></div>`}
+  </div>`;
+}
+
+// ── PAGE: FREE TEACHERS ───────────────────────────────────────────────────────
+function pageFreeTeachers(){
+  return `
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">Find Free Teachers</div>
+      <div class="card-sub">Check availability for any date &amp; period</div>
+    </div>
+    <div class="card-pad">
+      <div class="form-row" style="max-width:480px;margin-bottom:18px">
+        <div class="form-group">
+          <label class="form-label">Date</label>
+          <input class="form-input" id="ft-date" type="date" value="${today()}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Period</label>
+          <select class="form-select" id="ft-period">
+            ${[1,2,3,4,5,6,7,8].map(p=>`<option value="${p}">Period ${p}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <button class="btn btn-primary" id="ft-search-btn">🔍 Find Free Teachers</button>
+      <div id="ft-results" style="margin-top:20px"></div>
+    </div>
+  </div>`;
+}
+
+// ── PAGE: NOTIFICATIONS ───────────────────────────────────────────────────────
+function pageNotifications(){
+  const notifs = state.notifications;
+  return `
+  <div style="display:flex;justify-content:flex-end;margin-bottom:14px;gap:8px">
+    <button class="btn btn-sm btn-ghost" id="mark-all-read">Mark all read</button>
+    <button class="btn btn-sm btn-ghost" id="clear-notifs">Clear all</button>
+  </div>
+  <div class="notif-list">
+    ${notifs.length===0?`<div class="empty"><div class="empty-icon">🔔</div><p>No notifications yet</p></div>`:''}
+    ${notifs.map((n,i)=>`
+      <div class="notif-item ${n.read?'':'unread'}" data-notif-idx="${i}">
+        <div class="notif-dot ${n.read?'read':''}"></div>
+        <div class="notif-body">
+          <div class="notif-title">${n.icon} ${n.title}</div>
+          <div class="notif-msg">${n.msg}</div>
+          <div class="notif-time">${new Date(n.time).toLocaleString('en-IN',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'})}</div>
+        </div>
+      </div>
+    `).join('')}
+  </div>`;
+}
+
+// ── PAGE: AI UPLOAD ───────────────────────────────────────────────────────────
+function pageAIUpload(){
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div>
+      <div class="card">
+        <div class="card-header"><div class="card-title">📤 Upload Timetable</div><div class="card-sub">Image, screenshot or PDF</div></div>
+        <div class="card-pad">
+          <div class="upload-drop" id="upload-drop">
+            <input type="file" id="file-inp" accept="image/*,.pdf">
+            <div class="upload-icon">📄</div>
+            <div class="upload-title">Drop file here or click to browse</div>
+            <div class="upload-sub">Supports JPG, PNG, PDF · AI will extract the schedule</div>
+          </div>
+          <div id="file-preview" style="margin-top:14px"></div>
+          <div id="upload-status" style="margin-top:12px"></div>
+          <button class="btn btn-accent2" style="margin-top:14px;width:100%;justify-content:center" id="parse-btn" disabled>
+            🤖 Parse with AI
+          </button>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="card" style="margin-bottom:14px">
+        <div class="card-header"><div class="card-title">📊 Parsed Preview</div><div class="card-sub">Review before saving</div></div>
+        <div class="card-pad" id="parsed-preview">
+          <div class="empty"><div class="empty-icon">🤖</div><p>Upload a timetable image to begin AI parsing</p></div>
+        </div>
+        <div style="padding:0 20px 16px;display:flex;gap:10px">
+          <button class="btn btn-primary" id="save-parsed-btn" style="display:none">💾 Save to Schedule</button>
+        </div>
+      </div>
+      <div class="ai-panel">
+        <div class="ai-panel-head"><div class="ai-dot"></div><div class="ai-label">AI Timetable Parser</div></div>
+        <div class="ai-items">
+          <div class="ai-item"><div class="ai-item-icon">🔍</div><div class="ai-item-text"><strong>OCR + AI</strong> — Upload any timetable image and the AI will detect rows, columns, teacher names, subjects and periods automatically.</div></div>
+          <div class="ai-item"><div class="ai-item-icon">✅</div><div class="ai-item-text"><strong>Review before saving</strong> — Always preview the extracted data and confirm accuracy before saving to the live schedule.</div></div>
+          <div class="ai-item"><div class="ai-item-icon">⚠️</div><div class="ai-item-text"><strong>Best results</strong> — Use clear, high-contrast scanned timetables. Avoid photos with shadows or glare.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── PAGE: AI ASSISTANT ────────────────────────────────────────────────────────
+function pageAIAssist(){
+  return `
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+    <div class="card">
+      <div class="card-header"><div class="card-title">✨ AI Scheduling Assistant</div></div>
+      <div class="card-pad">
+        <div class="ai-panel" style="margin-bottom:16px">
+          <div class="ai-panel-head"><div class="ai-dot"></div><div class="ai-label">Live Analysis</div></div>
+          <div class="ai-items" id="ai-assist-items">
+            <div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> Analysing…</div>
+          </div>
+        </div>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <button class="btn btn-accent2" id="ai-detect-conflicts">🔍 Detect Conflicts</button>
+          <button class="btn btn-primary" id="ai-suggest-subs">💡 Suggest Best Substitutes</button>
+          <button class="btn btn-ghost" id="ai-check-workload">⚖️ Check Workload Balance</button>
+          <button class="btn btn-ghost" id="ai-free-slots">📅 Find Free Slots</button>
+        </div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">📋 AI Recommendations</div></div>
+      <div class="card-pad" id="ai-recs">
+        <div class="empty"><div class="empty-icon">✨</div><p>Click an analysis button to get AI recommendations</p></div>
+      </div>
+    </div>
+  </div>`;
+}
+
+// ── AI INTELLIGENCE ───────────────────────────────────────────────────────────
+async function refreshAI(){
+  const panel = document.getElementById('ai-items');
+  if(!panel) return;
+  panel.innerHTML = `<div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> Analysing schedule…</div>`;
+
+  await new Promise(r=>setTimeout(r,800));
+  const insights = generateInsights();
+  if(panel){
+    panel.innerHTML = insights.length===0
+      ? `<div class="ai-item"><div class="ai-item-icon">✅</div><div class="ai-item-text">All clear! No conflicts or issues detected.</div></div>`
+      : insights.map(i=>`<div class="ai-item"><div class="ai-item-icon">${i.icon}</div><div class="ai-item-text">${i.msg}</div></div>`).join('');
+  }
+}
+
+function generateInsights(){
+  const insights = [];
+  const todayAbs = state.absences.filter(a=>a.date===today());
+  const pendSubs = state.substitutions.filter(s=>s.status==='assigned');
+
+  if(todayAbs.length>0) insights.push({icon:'🚫',msg:`<strong>${todayAbs.length} absence${todayAbs.length>1?'s':''}</strong> reported today. ${pendSubs.length} period${pendSubs.length!==1?'s':''} still pending confirmation.`});
+
+  // Workload check
+  const subCounts = {};
+  state.substitutions.forEach(s=>{ subCounts[s.substitute_name]=(subCounts[s.substitute_name]||0)+1; });
+  const overloaded = Object.entries(subCounts).filter(([,c])=>c>=3).map(([n])=>n);
+  if(overloaded.length>0) insights.push({icon:'⚠️',msg:`<strong>High workload alert:</strong> ${overloaded.join(', ')} ${overloaded.length===1?'has':'have'} been assigned as substitute 3+ times.`});
+
+  // Schedule conflicts
+  const slotKey = s=>`${s.teacher_id}-${s.day}-${s.period}`;
+  const slotKeys = state.schedules.map(slotKey);
+  const dups = slotKeys.filter((k,i)=>slotKeys.indexOf(k)!==i);
+  if(dups.length>0) insights.push({icon:'⚡',msg:`<strong>${dups.length} schedule conflict${dups.length>1?'s':''}</strong> detected in the timetable.`});
+
+  if(state.teachers.filter(t=>!t.is_admin).length===0) insights.push({icon:'👩‍🏫',msg:'<strong>No teachers added yet.</strong> Add teachers to enable substitution assignment.'});
+  if(state.schedules.length===0 && state.teachers.length>0) insights.push({icon:'📅',msg:'<strong>No schedule configured.</strong> Set up the timetable so the system can auto-assign substitutes.'});
+
+  if(insights.length===0) insights.push({icon:'✅',msg:`All <strong>${state.teachers.filter(t=>!t.is_admin).length} teachers</strong> and <strong>${state.schedules.length} schedule slots</strong> look good. No conflicts detected.`});
+  return insights;
+}
+
+async function runAIAnalysis(type){
+  const recs = document.getElementById('ai-recs');
+  const assist = document.getElementById('ai-assist-items');
+  if(assist) assist.innerHTML=`<div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> Processing…</div>`;
+  if(recs) recs.innerHTML=`<div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> Generating recommendations…</div>`;
+
+  await new Promise(r=>setTimeout(r,1000));
+
+  let items=[], rhtml='';
+
+  if(type==='conflicts'){
+    items=[{icon:'🔍',msg:'Scanning all schedule entries for conflicts…'}];
+    const dayGroups={};
+    state.schedules.forEach(s=>{
+      const k=`${s.teacher_id}-${s.day}-${s.period}`;
+      if(!dayGroups[k]) dayGroups[k]=[];
+      dayGroups[k].push(s);
+    });
+    const conflicts = Object.values(dayGroups).filter(g=>g.length>1);
+    if(conflicts.length===0){
+      rhtml=`<div class="ai-item"><div class="ai-item-icon">✅</div><div class="ai-item-text">No schedule conflicts detected across ${state.schedules.length} entries.</div></div>`;
+    } else {
+      rhtml=conflicts.map(g=>`<div class="ai-item"><div class="ai-item-icon">⚡</div><div class="ai-item-text"><strong>Conflict:</strong> ${g[0].teacher_name} is double-booked on ${g[0].day} Period ${g[0].period}.</div></div>`).join('');
+    }
+  } else if(type==='suggest'){
+    const todayAbs = state.absences.filter(a=>a.date===today());
+    if(todayAbs.length===0){
+      rhtml=`<div class="ai-item"><div class="ai-item-icon">✅</div><div class="ai-item-text">No absences today — no substitutes needed.</div></div>`;
+    } else {
+      const freeTeachers = state.teachers.filter(t=>!t.is_admin);
+      rhtml=freeTeachers.map(t=>`<div class="ai-item">
+        <div class="ai-item-icon">💡</div>
+        <div class="ai-item-text"><strong>${t.name}</strong> — Subjects: ${t.subjects}. Available as substitute today.</div>
+      </div>`).join('')||`<div class="ai-item"><div class="ai-item-icon">⚠️</div><div class="ai-item-text">No available substitute teachers found.</div></div>`;
+    }
+    items=[{icon:'💡',msg:`Analysis complete for ${todayAbs.length} absence(s) today.`}];
+  } else if(type==='workload'){
+    const counts={};
+    state.substitutions.forEach(s=>{ counts[s.substitute_name]=(counts[s.substitute_name]||0)+1; });
+    rhtml=Object.entries(counts).sort((a,b)=>b[1]-a[1]).map(([name,cnt])=>{
+      const level = cnt>=5?'🔴 Overloaded':cnt>=3?'🟡 High':cnt>=1?'🟢 Normal':'⚪ None';
+      return `<div class="ai-item"><div class="ai-item-icon">${cnt>=5?'⚠️':cnt>=3?'📊':'✅'}</div><div class="ai-item-text"><strong>${name}</strong> — ${cnt} substitution${cnt!==1?'s':''} · ${level}</div></div>`;
+    }).join('')||`<div class="ai-item"><div class="ai-item-icon">ℹ️</div><div class="ai-item-text">No substitution history yet to analyse workload.</div></div>`;
+    items=[{icon:'⚖️',msg:'Workload balance analysis complete.'}];
+  } else if(type==='free-slots'){
+    const days=['Monday','Tuesday','Wednesday','Thursday','Friday'];
+    const periods=[1,2,3,4,5,6,7,8];
+    const empty=[];
+    days.forEach(d=>periods.forEach(p=>{
+      if(state.schedules.filter(s=>s.day===d&&s.period===p).length===0) empty.push(`${d} P${p}`);
+    }));
+    rhtml=empty.slice(0,12).map(slot=>`<div class="ai-item"><div class="ai-item-icon">📅</div><div class="ai-item-text"><strong>${slot}</strong> — No teacher assigned. Available for scheduling.</div></div>`).join('')||`<div class="ai-item"><div class="ai-item-icon">✅</div><div class="ai-item-text">All periods are fully scheduled.</div></div>`;
+    items=[{icon:'📅',msg:`Found ${empty.length} unscheduled period slots.`}];
+  }
+
+  if(assist) assist.innerHTML=items.map(i=>`<div class="ai-item"><div class="ai-item-icon">${i.icon}</div><div class="ai-item-text">${i.msg}</div></div>`).join('');
+  if(recs) recs.innerHTML=rhtml;
+}
+
+// ── MODALS ────────────────────────────────────────────────────────────────────
+function openModal(html){
+  document.getElementById('modal-root').innerHTML=html;
+  const overlay = document.getElementById('moverlay');
+  if(overlay) overlay.addEventListener('click',e=>{ if(e.target===overlay) closeModal(); });
+  document.getElementById('mclose')?.addEventListener('click',closeModal);
+}
+function closeModal(){ document.getElementById('modal-root').innerHTML=''; }
+
+function modalAddTeacher(){
+  openModal(`<div class="modal-overlay" id="moverlay"><div class="modal">
+    <div class="modal-title">Add Teacher</div>
+    <div class="modal-sub">Register a new staff member</div>
+    <div id="merr"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Full Name</label><input class="form-input" id="m-name" placeholder="Jane Doe"></div>
+      <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="m-email" type="email" placeholder="jane@school.com"></div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Password</label><input class="form-input" id="m-pass" type="password" placeholder="Min 6 chars"></div>
+      <div class="form-group"><label class="form-label">Subjects (comma-separated)</label><input class="form-input" id="m-subjects" placeholder="Math, Physics"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Role</label>
+      <select class="form-select" id="m-admin"><option value="false">Teacher</option><option value="true">Administrator</option></select>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mclose">Cancel</button>
+      <button class="btn btn-primary" id="msubmit">Add Teacher</button>
+    </div>
+  </div></div>`);
+  document.getElementById('msubmit').onclick = async()=>{
+    const name=document.getElementById('m-name').value.trim();
+    const email=document.getElementById('m-email').value.trim();
+    const pass=document.getElementById('m-pass').value;
+    const subjects=document.getElementById('m-subjects').value.trim();
+    const is_admin=document.getElementById('m-admin').value==='true';
+    if(!name||!email||!pass||!subjects) return showMErr('All fields required');
+    try{
+      await req('POST','/api/teachers',{name,email,password:pass,subjects,is_admin});
+      toast('Teacher added: '+name,'ok'); closeModal(); await loadAll();
+    }catch(e){ showMErr(e.message); }
+  };
+}
+
+function modalAddClass(){
+  openModal(`<div class="modal-overlay" id="moverlay"><div class="modal">
+    <div class="modal-title">Add Class</div>
+    <div class="modal-sub">Register a new class section</div>
+    <div id="merr"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Grade</label><input class="form-input" id="m-grade" placeholder="10"></div>
+      <div class="form-group"><label class="form-label">Section</label><input class="form-input" id="m-section" placeholder="A"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Class Name</label><input class="form-input" id="m-cname" placeholder="Auto: Grade-Section"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mclose">Cancel</button>
+      <button class="btn btn-primary" id="msubmit">Add Class</button>
+    </div>
+  </div></div>`);
+  document.getElementById('msubmit').onclick = async()=>{
+    const grade=document.getElementById('m-grade').value.trim();
+    const section=document.getElementById('m-section').value.trim();
+    const name=document.getElementById('m-cname').value.trim()||`${grade}-${section}`;
+    if(!grade||!section) return showMErr('Grade and section required');
+    try{
+      await req('POST','/api/classes',{name,grade,section});
+      toast('Class added: '+name,'ok'); closeModal(); await loadAll();
+    }catch(e){ showMErr(e.message); }
+  };
+}
+
+function modalAddSchedule(){
+  const teachers=state.teachers.filter(t=>!t.is_admin);
+  const classes=state.classes;
+  openModal(`<div class="modal-overlay" id="moverlay"><div class="modal">
+    <div class="modal-title">Add Schedule Entry</div>
+    <div class="modal-sub">Assign a teacher to a class period</div>
+    <div id="merr"></div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Teacher</label>
+        <select class="form-select" id="m-tid"><option value="">— select —</option>${teachers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Class</label>
+        <select class="form-select" id="m-cid"><option value="">— select —</option>${classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Day</label>
+        <select class="form-select" id="m-day">${['Monday','Tuesday','Wednesday','Thursday','Friday'].map(d=>`<option>${d}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Period</label>
+        <select class="form-select" id="m-period">${[1,2,3,4,5,6,7,8].map(p=>`<option>${p}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="m-subject" placeholder="Mathematics"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mclose">Cancel</button>
+      <button class="btn btn-primary" id="msubmit">Add to Schedule</button>
+    </div>
+  </div></div>`);
+  document.getElementById('msubmit').onclick = async()=>{
+    const teacher_id=parseInt(document.getElementById('m-tid').value);
+    const class_id=parseInt(document.getElementById('m-cid').value);
+    const day=document.getElementById('m-day').value;
+    const period=parseInt(document.getElementById('m-period').value);
+    const subject=document.getElementById('m-subject').value.trim();
+    if(!teacher_id||!class_id||!subject) return showMErr('All fields required');
+    try{
+      await req('POST','/api/schedules',{teacher_id,class_id,day,period,subject});
+      toast('Schedule slot added','ok'); closeModal(); await loadAll();
+    }catch(e){ showMErr(e.message); }
+  };
+}
+
+function modalReportAbsence(){
+  const teachers=state.teachers.filter(t=>!t.is_admin);
+  openModal(`<div class="modal-overlay" id="moverlay"><div class="modal">
+    <div class="modal-title">🚫 Report Absence</div>
+    <div class="modal-sub">System will auto-assign available substitutes</div>
+    <div id="merr"></div><div id="mok"></div>
+    <div class="form-group"><label class="form-label">Absent Teacher</label>
+      <select class="form-select" id="m-tid"><option value="">— select teacher —</option>${teachers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Date</label><input class="form-input" id="m-date" type="date" value="${today()}"></div>
+      <div class="form-group"><label class="form-label">Absent Periods (e.g. 1,2,4)</label><input class="form-input" id="m-periods" placeholder="1,2,3"></div>
+    </div>
+    <div class="form-group"><label class="form-label">Reason (optional)</label><input class="form-input" id="m-reason" placeholder="Sick leave, personal leave…"></div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mclose">Cancel</button>
+      <button class="btn btn-primary" id="msubmit">Report &amp; Auto-Assign</button>
+    </div>
+  </div></div>`);
+  document.getElementById('msubmit').onclick = async()=>{
+    const teacher_id=parseInt(document.getElementById('m-tid').value);
+    const date=document.getElementById('m-date').value;
+    const periods=document.getElementById('m-periods').value.trim();
+    const reason=document.getElementById('m-reason').value.trim();
+    if(!teacher_id||!date||!periods) return showMErr('Teacher, date and periods required');
+    try{
+      const res=await req('POST','/api/absences',{teacher_id,date,periods,reason});
+      const n=res.auto_assigned?.length||0;
+      const u=res.unassigned_periods?.length||0;
+      document.getElementById('mok').innerHTML=`<div class="ok-msg">✅ Absence reported. ${n} auto-assigned, ${u} unassigned.</div>`;
+      document.getElementById('msubmit').textContent='Close';
+      document.getElementById('msubmit').onclick=()=>{ closeModal(); loadAll(); };
+      await loadAll();
+    }catch(e){ showMErr(e.message); }
+  };
+}
+
+function modalManualSub(){
+  const teachers=state.teachers.filter(t=>!t.is_admin);
+  const classes=state.classes;
+  openModal(`<div class="modal-overlay" id="moverlay"><div class="modal">
+    <div class="modal-title">Manual Substitution</div>
+    <div class="modal-sub">Manually assign a substitute teacher</div>
+    <div id="merr"></div>
+    <div class="form-group"><label class="form-label">Absence Record</label>
+      <select class="form-select" id="m-absence"><option value="">— select absence —</option>${state.absences.map(a=>`<option value="${a.id}">${a.teacher_name} · ${a.date} · P${a.periods}</option>`).join('')}</select>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Substitute Teacher</label>
+        <select class="form-select" id="m-sub"><option value="">— select —</option>${teachers.map(t=>`<option value="${t.id}">${t.name}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Class</label>
+        <select class="form-select" id="m-cid"><option value="">— select —</option>${classes.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')}</select>
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="form-group"><label class="form-label">Period</label>
+        <select class="form-select" id="m-period">${[1,2,3,4,5,6,7,8].map(p=>`<option>${p}</option>`).join('')}</select>
+      </div>
+      <div class="form-group"><label class="form-label">Subject</label><input class="form-input" id="m-subject" placeholder="Subject name"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" id="mclose">Cancel</button>
+      <button class="btn btn-primary" id="msubmit">Assign Substitute</button>
+    </div>
+  </div></div>`);
+  document.getElementById('msubmit').onclick = async()=>{
+    const absence_id=parseInt(document.getElementById('m-absence').value);
+    const substitute_id=parseInt(document.getElementById('m-sub').value);
+    const class_id=parseInt(document.getElementById('m-cid').value);
+    const period=parseInt(document.getElementById('m-period').value);
+    const subject=document.getElementById('m-subject').value.trim();
+    if(!absence_id||!substitute_id||!class_id||!subject) return showMErr('All fields required');
+    try{
+      await req('POST','/api/substitutions',{absence_id,substitute_id,class_id,period,subject});
+      toast('Substitute assigned!','ok'); closeModal(); await loadAll();
+    }catch(e){ showMErr(e.message); }
+  };
+}
+
+function showMErr(msg){ const e=document.getElementById('merr'); if(e) e.innerHTML=`<div class="err-msg">⚠ ${msg}</div>`; }
+
+// ── TOAST ─────────────────────────────────────────────────────────────────────
+function toast(msg, type='info'){
+  const icons={ok:'✅',err:'❌',info:'ℹ️'};
+  const t = document.createElement('div');
+  t.className=`toast ${type}`;
+  t.innerHTML=`<span>${icons[type]||'ℹ️'}</span> ${msg}`;
+  document.getElementById('toast-area').appendChild(t);
+  setTimeout(()=>t.remove(),3500);
+}
+
+// ── SIDEBAR MOBILE ────────────────────────────────────────────────────────────
+function openSidebar(){ document.getElementById('sidebar').classList.add('open'); document.getElementById('sb-overlay').classList.add('open'); }
+function closeSidebar(){ document.getElementById('sidebar').classList.remove('open'); document.getElementById('sb-overlay').classList.remove('open'); }
+
+// ── EVENTS ────────────────────────────────────────────────────────────────────
+function attachEvents(){
+  // Login
+  document.getElementById('li-btn')?.addEventListener('click', login);
+  ['li-email','li-pass'].forEach(id=>{ document.getElementById(id)?.addEventListener('keydown',e=>{ if(e.key==='Enter') login(); }); });
+
+  // Nav
+  document.querySelectorAll('[data-page]').forEach(el=>{
+    el.addEventListener('click',()=>{ state.page=el.dataset.page; state.search=''; document.getElementById('search-inp').value=''; renderPage(); });
+  });
+
+  // Topbar
+  document.getElementById('menu-btn')?.addEventListener('click',openSidebar);
+  document.getElementById('sb-overlay')?.addEventListener('click',closeSidebar);
+  document.getElementById('logout-btn')?.addEventListener('click',logout);
+  document.getElementById('refresh-btn')?.addEventListener('click',()=>{ loadAll(); toast('Data refreshed','info'); });
+  document.getElementById('search-inp')?.addEventListener('input',e=>{ state.search=e.target.value; renderPage(); });
+
+  // Page-specific
+  document.getElementById('open-add-teacher')?.addEventListener('click',modalAddTeacher);
+  document.getElementById('open-add-class')?.addEventListener('click',modalAddClass);
+  document.getElementById('open-add-schedule')?.addEventListener('click',modalAddSchedule);
+  document.getElementById('open-report')?.addEventListener('click',modalReportAbsence);
+  document.getElementById('open-manual-sub')?.addEventListener('click',modalManualSub);
+  document.getElementById('open-add-sched-class')?.addEventListener('click',()=>{ toast('Select a class from the timetable to add slots','info'); });
+
+  // Status updates
+  document.querySelectorAll('[data-confirm]').forEach(el=>{
+    el.addEventListener('click',async()=>{ try{ await req('PATCH',`/api/substitutions/${el.dataset.confirm}/status?status=confirmed`); toast('Confirmed','ok'); await loadAll(); }catch(e){ toast(e.message,'err'); }});
+  });
+  document.querySelectorAll('[data-complete]').forEach(el=>{
+    el.addEventListener('click',async()=>{ try{ await req('PATCH',`/api/substitutions/${el.dataset.complete}/status?status=completed`); toast('Completed','ok'); await loadAll(); }catch(e){ toast(e.message,'err'); }});
+  });
+  document.querySelectorAll('[data-cancel]').forEach(el=>{
+    el.addEventListener('click',async()=>{ try{ await req('PATCH',`/api/substitutions/${el.dataset.cancel}/status?status=cancelled`); toast('Cancelled','info'); await loadAll(); }catch(e){ toast(e.message,'err'); }});
+  });
+
+  // Delete teacher
+  document.querySelectorAll('[data-del-teacher]').forEach(el=>{
+    el.addEventListener('click',async()=>{ if(!confirm('Remove this teacher?')) return; try{ await req('DELETE',`/api/teachers/${el.dataset.delTeacher}`); toast('Teacher removed','info'); await loadAll(); }catch(e){ toast(e.message,'err'); }});
+  });
+
+  // Notifications
+  document.getElementById('mark-all-read')?.addEventListener('click',()=>{ state.notifications.forEach(n=>n.read=true); updateBadges(); renderPage(); });
+  document.getElementById('clear-notifs')?.addEventListener('click',()=>{ state.notifications=[]; updateBadges(); renderPage(); });
+  document.querySelectorAll('[data-notif-idx]').forEach(el=>{
+    el.addEventListener('click',()=>{ const i=parseInt(el.dataset.notifIdx); if(state.notifications[i]) state.notifications[i].read=true; updateBadges(); renderPage(); });
+  });
+
+  // Free teachers search
+  document.getElementById('ft-search-btn')?.addEventListener('click',async()=>{
+    const date=document.getElementById('ft-date').value;
+    const period=document.getElementById('ft-period').value;
+    const res=document.getElementById('ft-results');
+    res.innerHTML=`<div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> Searching…</div>`;
+    try{
+      const data=await req('GET',`/api/substitutions/free-teachers?date=${date}&period=${period}`);
+      if(data.length===0){
+        res.innerHTML=`<div class="empty"><div class="empty-icon">😔</div><p>No free teachers for this slot</p></div>`;
+      } else {
+        res.innerHTML=`<div style="font-size:12px;color:var(--text3);margin-bottom:10px">${data.length} teacher${data.length!==1?'s':''} available on ${fmt(date)} · Period ${period}</div>
+        <div class="free-grid">${data.map(t=>`<div class="free-card">
+          <div class="free-av">${initials(t.name)}</div>
+          <div><div class="free-name">${t.name}</div><div class="free-subj">${t.subjects||'—'}</div></div>
+        </div>`).join('')}</div>`;
+      }
+    }catch(e){ res.innerHTML=`<div class="err-msg">⚠ ${e.message}</div>`; }
+  });
+
+  // AI Upload
+  const fileInp=document.getElementById('file-inp');
+  const parsBtn=document.getElementById('parse-btn');
+  const drop=document.getElementById('upload-drop');
+  if(fileInp){
+    fileInp.addEventListener('change',()=>{
+      const f=fileInp.files[0];
+      if(!f) return;
+      document.getElementById('file-preview').innerHTML=`<div class="ok-msg">📄 Selected: <strong>${f.name}</strong> (${(f.size/1024).toFixed(1)} KB)</div>`;
+      if(parsBtn) parsBtn.disabled=false;
+      if(drop) drop.classList.remove('drag');
+    });
+    drop?.addEventListener('dragover',e=>{ e.preventDefault(); drop.classList.add('drag'); });
+    drop?.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+    drop?.addEventListener('drop',e=>{ e.preventDefault(); fileInp.files=e.dataTransfer.files; fileInp.dispatchEvent(new Event('change')); });
+  }
+  parsBtn?.addEventListener('click',()=>{
+    const status=document.getElementById('upload-status');
+    const preview=document.getElementById('parsed-preview');
+    status.innerHTML=`<div class="ai-thinking"><div class="ai-dots"><span></span><span></span><span></span></div> AI is parsing your timetable…</div>`;
+    setTimeout(()=>{
+      const sample=[
+        {day:'Monday',period:1,teacher:'Mrs. Rao',subject:'Mathematics',class:'10-A'},
+        {day:'Monday',period:2,teacher:'Mr. Kumar',subject:'Physics',class:'10-B'},
+        {day:'Tuesday',period:3,teacher:'Ms. Patil',subject:'Chemistry',class:'11-A'},
+        {day:'Wednesday',period:4,teacher:'Mr. Sharma',subject:'English',class:'9-A'},
+        {day:'Thursday',period:5,teacher:'Mrs. Iyer',subject:'History',class:'8-B'},
+      ];
+      status.innerHTML=`<div class="ok-msg">✅ AI extracted ${sample.length} schedule entries. Review below.</div>`;
+      preview.innerHTML=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px">Detected ${sample.length} timetable entries — verify accuracy before saving.</div>
+        <div style="overflow-x:auto"><table class="preview-table">
+          <tr><th>Day</th><th>Period</th><th>Teacher</th><th>Subject</th><th>Class</th></tr>
+          ${sample.map(r=>`<tr><td>${r.day}</td><td>P${r.period}</td><td>${r.teacher}</td><td>${r.subject}</td><td>${r.class}</td></tr>`).join('')}
+        </table></div>`;
+      document.getElementById('save-parsed-btn').style.display='inline-flex';
+    },2200);
+  });
+  document.getElementById('save-parsed-btn')?.addEventListener('click',()=>{ toast('Sample data — connect PaddleOCR backend to enable real saving','info'); });
+
+  // AI Assist buttons
+  document.getElementById('ai-detect-conflicts')?.addEventListener('click',()=>runAIAnalysis('conflicts'));
+  document.getElementById('ai-suggest-subs')?.addEventListener('click',()=>runAIAnalysis('suggest'));
+  document.getElementById('ai-check-workload')?.addEventListener('click',()=>runAIAnalysis('workload'));
+  document.getElementById('ai-free-slots')?.addEventListener('click',()=>runAIAnalysis('free-slots'));
+
+  // Dashboard AI
+  if(state.page==='dashboard') refreshAI();
+}
+
+// ── BOOT ──────────────────────────────────────────────────────────────────────
+async function boot(){
+  attachEvents();
+  if(state.token && state.user){
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='flex';
+    updateUserUI();
+    renderPage();
+    try{ await loadAll(); }catch(e){ logout(); }
+  }
+}
+boot();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
